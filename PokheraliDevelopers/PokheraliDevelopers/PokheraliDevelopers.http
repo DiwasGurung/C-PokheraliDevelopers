@@ -1,0 +1,6 @@
+@PokheraliDevelopers_HostAddress = http://localhost:5080
+
+GET {{PokheraliDevelopers_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
