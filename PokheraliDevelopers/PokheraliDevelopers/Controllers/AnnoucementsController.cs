@@ -37,7 +37,7 @@ public class AnnouncementsController : ControllerBase
 
     // GET: api/Announcements/admin - Get all announcements (for admin)
     [HttpGet("admin")]
-    [Authorize(Roles = "Admin")]
+
     public async Task<ActionResult<IEnumerable<Announcement>>> GetAllAnnouncements()
     {
         var announcements = await _context.Announcements
@@ -49,7 +49,7 @@ public class AnnouncementsController : ControllerBase
 
     // GET: api/Announcements/{id} - Get a specific announcement
     [HttpGet("{id}")]
-    [Authorize(Roles = "Admin")]
+ 
     public async Task<ActionResult<Announcement>> GetAnnouncement(int id)
     {
         var announcement = await _context.Announcements.FindAsync(id);
@@ -62,41 +62,36 @@ public class AnnouncementsController : ControllerBase
         return announcement;
     }
 
-    // POST: api/Announcements - Create a new announcement
     [HttpPost]
-    [Authorize(Roles = "Admin")]
-    public async Task<ActionResult<Announcement>> CreateAnnouncement([FromBody] CreateAnnouncementDto announcementDto)
+public async Task<ActionResult<Announcement>> CreateAnnouncement([FromBody] CreateAnnouncementDto announcementDto)
+{
+    if (!ModelState.IsValid)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-        // Set creation info
-        var announcement = new Announcement
-        {
-            Title = announcementDto.Title,
-            Content = announcementDto.Content,
-            StartDate = announcementDto.StartDate,
-            EndDate = announcementDto.EndDate,
-            IsActive = true,
-            CreatedById = userId,
-            CreatedAt = DateTime.UtcNow,
-            BgColor = "#f3f4f6", // Default light gray
-            TextColor = "#1f2937" // Default dark gray
-        };
-
-        _context.Announcements.Add(announcement);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetAnnouncement), new { id = announcement.Id }, announcement);
+        return BadRequest(ModelState);
     }
+
+   
+    var announcement = new Announcement
+    {
+        Title = announcementDto.Title,
+        Content = announcementDto.Content,
+        StartDate = announcementDto.StartDate,
+        EndDate = announcementDto.EndDate,
+        IsActive = true, // assuming active by default
+        CreatedAt = DateTime.UtcNow,
+       
+    };
+
+    _context.Announcements.Add(announcement);
+    await _context.SaveChangesAsync();
+
+    return CreatedAtAction(nameof(GetAnnouncement), new { id = announcement.Id }, announcement);
+}
+
 
     // PUT: api/Announcements/{id} - Update an announcement
     [HttpPut("{id}")]
-    [Authorize(Roles = "Admin")]
+
     public async Task<IActionResult> UpdateAnnouncement(int id, [FromBody] CreateAnnouncementDto announcementDto)
     {
         if (!ModelState.IsValid)
@@ -139,7 +134,7 @@ public class AnnouncementsController : ControllerBase
 
     // PUT: api/Announcements/{id}/toggle - Toggle announcement active status
     [HttpPut("{id}/toggle")]
-    [Authorize(Roles = "Admin")]
+ 
     public async Task<IActionResult> ToggleAnnouncementStatus(int id)
     {
         var announcement = await _context.Announcements.FindAsync(id);

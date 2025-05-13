@@ -19,18 +19,21 @@ namespace PokheraliDevelopers.Controllers
     {
         private readonly ApplicationDbContext _context;
 
+        private FileService _fileService;
+
         public BooksController(ApplicationDbContext context)
         {
             _context = context;
         }
 
-    
+        // GET: api/Books
         [HttpGet]
         public async Task<ActionResult<IEnumerable<BookResponseDto>>> GetBooks(
         int page = 1,
         int pageSize = 10,
         string search = "",
         string sort = "title",
+        bool desc = false,
         string genre = "",
         decimal? minPrice = null,
         decimal? maxPrice = null,
@@ -46,7 +49,11 @@ namespace PokheraliDevelopers.Controllers
             // Search filter
             if (!string.IsNullOrEmpty(search))
             {
-                query = query.Where(b => b.Title.Contains(search) || b.Author.Contains(search));
+                search = search.ToLower();
+                query = query.Where(b =>
+                    b.Title.ToLower().Contains(search) ||
+                    b.Author.ToLower().Contains(search) ||
+                    (b.ISBN != null && b.ISBN.ToLower().Contains(search)));
             }
 
             // Genre filter
@@ -69,39 +76,75 @@ namespace PokheraliDevelopers.Controllers
             // Rating filter
             if (rating.HasValue)
             {
-                // Assuming rating is stored in a related table or can be calculated
-                // Add a filter condition based on rating here if applicable
+                // Add a filter condition based on rating if applicable
+                query = query.Where(b => b.Reviews.Any() && b.Reviews.Average(r => r.Rating) >= rating.Value);
             }
 
             // In Stock filter
-            if (inStock.HasValue)
+            if (inStock.HasValue && inStock.Value)
             {
-                query = query.Where(b => b.Stock > 0); // Assuming inStock filters books with stock > 0
+                query = query.Where(b => b.Stock > 0);
             }
 
             // Sorting
             switch (sort.ToLower())
             {
                 case "price":
-                    query = query.OrderBy(b => b.Price);
+                    query = desc
+                        ? query.OrderByDescending(b => b.Price)
+                        : query.OrderBy(b => b.Price);
+                    break;
+                case "author":
+                    query = desc
+                        ? query.OrderByDescending(b => b.Author)
+                        : query.OrderBy(b => b.Author);
                     break;
                 case "title":
                 default:
-                    query = query.OrderBy(b => b.Title);
+                    query = desc
+                        ? query.OrderByDescending(b => b.Title)
+                        : query.OrderBy(b => b.Title);
                     break;
             }
-
-            // Pagination
-            var skip = (page - 1) * pageSize;
-            var books = await query.Skip(skip).Take(pageSize).ToListAsync();
 
             // Get total count for pagination
             var totalBooks = await query.CountAsync();
             var totalPages = (int)Math.Ceiling((double)totalBooks / pageSize);
 
+            // Pagination
+            var skip = (page - 1) * pageSize;
+            var books = await query.Skip(skip).Take(pageSize).ToListAsync();
+
+            // Check if the user is authenticated to determine bookmarks
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var isAuthenticated = !string.IsNullOrEmpty(userId);
+
+            // Transform to DTOs with additional properties
+            var bookDtos = books.Select(book => new BookResponseDto
+            {
+                Id = book.Id,
+                Title = book.Title,
+                Author = book.Author,
+                ISBN = book.ISBN,
+                Description = book.Description,
+                Price = book.Price,
+                ImageUrl = book.ImageUrl,
+                Genre = book.Genre,
+                StockQuantity = book.Stock,
+                IsOnSale = book.IsOnSale &&
+                          book.DiscountPercentage.HasValue &&
+                          book.DiscountStartDate <= DateTime.UtcNow &&
+                          (!book.DiscountEndDate.HasValue || book.DiscountEndDate >= DateTime.UtcNow),
+                DiscountPercentage = book.DiscountPercentage,
+                DiscountStartDate = book.DiscountStartDate,
+                DiscountEndDate = book.DiscountEndDate,
+                OriginalPrice = book.OriginalPrice,
+                IsBookmarked = isAuthenticated && _context.Bookmarks.Any(bm => bm.BookId == book.Id && bm.UserId == userId)
+            }).ToList();
+
             return Ok(new
             {
-                books,
+                books = bookDtos,
                 totalPages,
                 totalBooks,
                 currentPage = page,
@@ -109,9 +152,21 @@ namespace PokheraliDevelopers.Controllers
             });
         }
 
+        // GET: api/Books/genres - Get all unique genres
+        [HttpGet("genres")]
+        public async Task<ActionResult<IEnumerable<string>>> GetGenres()
+        {
+            var genres = await _context.Books
+                .Where(b => b.Genre != null && b.Genre != "")
+                .Select(b => b.Genre)
+                .Distinct()
+                .OrderBy(g => g)
+                .ToListAsync();
+
+            return genres;
+        }
 
         // GET: api/Books/{id}
-        // Feature 2: User can view book details
         [HttpGet("{id}")]
         public async Task<ActionResult<BookDto>> GetBook(int id)
         {
@@ -157,6 +212,8 @@ namespace PokheraliDevelopers.Controllers
                           book.DiscountStartDate <= DateTime.UtcNow &&
                           (!book.DiscountEndDate.HasValue || book.DiscountEndDate >= DateTime.UtcNow),
                 DiscountPercentage = book.DiscountPercentage,
+                DiscountStartDate = book.DiscountStartDate,
+                DiscountEndDate = book.DiscountEndDate,
                 OriginalPrice = book.OriginalPrice,
                 AverageRating = book.Reviews.Any() ? book.Reviews.Average(r => r.Rating) : 0,
                 ReviewCount = book.Reviews.Count,
@@ -169,7 +226,8 @@ namespace PokheraliDevelopers.Controllers
             return bookDto;
         }
 
-        
+        // POST: api/Books
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<ActionResult<BookDto>> CreateBook(CreateBookDto createBookDto)
         {
@@ -197,7 +255,7 @@ namespace PokheraliDevelopers.Controllers
                 DiscountPercentage = createBookDto.DiscountPercentage,
                 DiscountStartDate = createBookDto.DiscountStartDate,
                 DiscountEndDate = createBookDto.DiscountEndDate,
-                OriginalPrice = createBookDto.OriginalPrice,
+                OriginalPrice = createBookDto.OriginalPrice ?? createBookDto.Price,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -229,16 +287,24 @@ namespace PokheraliDevelopers.Controllers
                 IsComingSoon = book.PublishDate.HasValue && book.PublishDate > DateTime.UtcNow,
                 IsOnSale = book.IsOnSale,
                 DiscountPercentage = book.DiscountPercentage,
+                DiscountStartDate = book.DiscountStartDate,
+                DiscountEndDate = book.DiscountEndDate,
                 OriginalPrice = book.OriginalPrice,
                 CreatedAt = book.CreatedAt,
                 UpdatedAt = book.UpdatedAt
             });
         }
 
+        // PUT: api/Books/{id}
         [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateBook(int id, UpdateBookDto updateBookDto)
+        public async Task<IActionResult> UpdateBook(int id, [FromBody] UpdateBookDto updateBookDto)
         {
+            if (id != updateBookDto.Id)
+            {
+                return BadRequest("ID in the URL doesn't match the ID in the request body");
+            }
+
             var book = await _context.Books.FindAsync(id);
             if (book == null)
             {
@@ -248,69 +314,92 @@ namespace PokheraliDevelopers.Controllers
             // Only update properties that are provided
             if (updateBookDto.Title != null)
                 book.Title = updateBookDto.Title;
-                
+
             if (updateBookDto.ISBN != null)
                 book.ISBN = updateBookDto.ISBN;
-                
+
             if (updateBookDto.Description != null)
                 book.Description = updateBookDto.Description;
-                
+
             if (updateBookDto.Author != null)
                 book.Author = updateBookDto.Author;
-                
+
             if (updateBookDto.Publisher != null)
                 book.Publisher = updateBookDto.Publisher;
-                
+
             if (updateBookDto.PublicationDate.HasValue)
                 book.PublishDate = updateBookDto.PublicationDate;
-                
+
             if (updateBookDto.Price.HasValue)
                 book.Price = updateBookDto.Price.Value;
-                
+
             if (updateBookDto.StockQuantity.HasValue)
                 book.Stock = updateBookDto.StockQuantity.Value;
-                
+
             if (updateBookDto.Language != null)
                 book.Language = updateBookDto.Language;
-                
+
             if (updateBookDto.Format != null)
                 book.Format = updateBookDto.Format;
-                
+
             if (updateBookDto.Genre != null)
                 book.Genre = updateBookDto.Genre;
-                
-            if (updateBookDto.ImageUrl != null)
-                book.ImageUrl = updateBookDto.ImageUrl;
-                
+
             if (updateBookDto.Pages.HasValue)
                 book.Pages = updateBookDto.Pages;
-                
+
             if (updateBookDto.Dimensions != null)
                 book.Dimensions = updateBookDto.Dimensions;
-                
+
             if (updateBookDto.Weight != null)
                 book.Weight = updateBookDto.Weight;
-                
+
             if (updateBookDto.IsBestseller.HasValue)
                 book.IsBestseller = updateBookDto.IsBestseller.Value;
-                
+
             if (updateBookDto.IsNewRelease.HasValue)
                 book.IsNewRelease = updateBookDto.IsNewRelease.Value;
-                
+
+            // Handle discount properties specifically
             if (updateBookDto.IsOnSale.HasValue)
+            {
                 book.IsOnSale = updateBookDto.IsOnSale.Value;
-                
+
+                // If turning off the sale, clear discount fields
+                if (!updateBookDto.IsOnSale.Value)
+                {
+                    book.DiscountPercentage = null;
+                    book.DiscountStartDate = null;
+                    book.DiscountEndDate = null;
+                    // Keep original price for reference
+                }
+            }
+
             if (updateBookDto.DiscountPercentage.HasValue)
+            {
                 book.DiscountPercentage = updateBookDto.DiscountPercentage;
-                
+
+                // If setting a discount and no original price is set, store current price
+                if (book.OriginalPrice == null || book.OriginalPrice <= 0)
+                {
+                    book.OriginalPrice = book.Price;
+                }
+            }
+
             if (updateBookDto.OriginalPrice.HasValue)
                 book.OriginalPrice = updateBookDto.OriginalPrice;
-                
+
             if (updateBookDto.DiscountStartDate.HasValue)
                 book.DiscountStartDate = updateBookDto.DiscountStartDate;
-                
+
             if (updateBookDto.DiscountEndDate.HasValue)
                 book.DiscountEndDate = updateBookDto.DiscountEndDate;
+
+            // Handle image URL (if provided)
+            if (!string.IsNullOrEmpty(updateBookDto.ImageUrl))
+            {
+                book.ImageUrl = updateBookDto.ImageUrl;
+            }
 
             // Always update the UpdatedAt timestamp
             book.UpdatedAt = DateTime.UtcNow;
@@ -336,6 +425,7 @@ namespace PokheraliDevelopers.Controllers
             return NoContent();
         }
 
+        // DELETE: api/Books/{id}
         [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBook(int id)
@@ -352,6 +442,7 @@ namespace PokheraliDevelopers.Controllers
             return NoContent();
         }
 
+        // PATCH: api/Books/{id}/inventory - Update inventory quantity
         [Authorize(Roles = "Admin")]
         [HttpPatch("{id}/inventory")]
         public async Task<IActionResult> UpdateInventory(int id, [FromBody] int quantity)
@@ -367,6 +458,70 @@ namespace PokheraliDevelopers.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        // POST: api/Books/{id}/discount - Add or update discount
+        [Authorize(Roles = "Admin")]
+        [HttpPost("{id}/discount")]
+        public async Task<IActionResult> SetDiscount(int id, [FromBody] DiscountDto discountDto)
+        {
+            var book = await _context.Books.FindAsync(id);
+            if (book == null)
+            {
+                return NotFound();
+            }
+
+            // Store original price if not set and adding a discount
+            if ((book.OriginalPrice == null || book.OriginalPrice <= 0) && discountDto.IsOnSale)
+            {
+                book.OriginalPrice = book.Price;
+            }
+
+            // Update discount fields
+            book.IsOnSale = discountDto.IsOnSale;
+            book.DiscountPercentage = discountDto.DiscountPercentage;
+            book.DiscountStartDate = discountDto.StartDate;
+            book.DiscountEndDate = discountDto.EndDate;
+            book.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Discount updated successfully",
+                bookId = book.Id,
+                isOnSale = book.IsOnSale,
+                discountPercentage = book.DiscountPercentage,
+                startDate = book.DiscountStartDate,
+                endDate = book.DiscountEndDate
+            });
+        }
+
+        // DELETE: api/Books/{id}/discount - Remove discount
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("{id}/discount")]
+        public async Task<IActionResult> RemoveDiscount(int id)
+        {
+            var book = await _context.Books.FindAsync(id);
+            if (book == null)
+            {
+                return NotFound();
+            }
+
+            // Remove discount fields but keep original price for reference
+            book.IsOnSale = false;
+            book.DiscountPercentage = null;
+            book.DiscountStartDate = null;
+            book.DiscountEndDate = null;
+            book.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Discount removed successfully",
+                bookId = book.Id
+            });
         }
 
         private bool BookExists(int id)

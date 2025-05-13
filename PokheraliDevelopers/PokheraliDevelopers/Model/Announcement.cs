@@ -16,8 +16,6 @@ public class Announcement
     [StringLength(500)]
     public string Content { get; set; }
 
-    public string BgColor { get; set; } = "#f3f4f6"; // Default light gray
-    public string TextColor { get; set; } = "#1f2937"; // Default dark gray
 
     [Required]
     public DateTime StartDate { get; set; }
@@ -26,8 +24,7 @@ public class Announcement
 
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public string CreatedById { get; set; } // Admin who created it
+   
 
-    [ForeignKey("CreatedById")]
-    public virtual ApplicationUser CreatedBy { get; set; }
+  
 }

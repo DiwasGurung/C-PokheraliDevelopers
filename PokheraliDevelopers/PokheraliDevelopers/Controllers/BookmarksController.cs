@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +17,6 @@ namespace PokheraliDevelopers.Controllers
     public class BookmarksController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-
         public BookmarksController(ApplicationDbContext context)
         {
             _context = context;
@@ -29,18 +27,17 @@ namespace PokheraliDevelopers.Controllers
         public async Task<ActionResult<IEnumerable<BookmarkDto>>> GetBookmarks()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
             var bookmarks = await _context.Bookmarks
                 .Where(b => b.UserId == userId)
                 .Include(b => b.Book)
                 .Select(b => new BookmarkDto
                 {
-                    Id = b.Id,
+                    Id = b.BookId, // Changed to return BookId as Id for simplicity in frontend
                     BookId = b.BookId,
                     Title = b.Book.Title,
                     Author = b.Book.Author,
-                    Price = b.Book.Price,
                     ImageUrl = b.Book.ImageUrl,
+                    Price = b.Book.Price,
                     IsOnSale = b.Book.IsOnSale &&
                               b.Book.DiscountPercentage.HasValue &&
                               b.Book.DiscountStartDate <= DateTime.UtcNow &&
@@ -53,9 +50,9 @@ namespace PokheraliDevelopers.Controllers
             return bookmarks;
         }
 
-        // Feature 5: Member can bookmark books (Add to Whitelist)
-        [HttpPost("{bookId}")]
-        public async Task<IActionResult> AddBookmark(int bookId)
+        // POST: api/Bookmarks - Add bookmark
+        [HttpPost]
+        public async Task<IActionResult> AddBookmark([FromBody] int bookId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -65,7 +62,7 @@ namespace PokheraliDevelopers.Controllers
 
             if (existingBookmark != null)
             {
-                return Conflict(new { message = "Book already bookmarked" });
+                return Ok(new { message = "Book already bookmarked" });
             }
 
             // Check if book exists
@@ -85,9 +82,15 @@ namespace PokheraliDevelopers.Controllers
             _context.Bookmarks.Add(bookmark);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Book bookmarked successfully" });
+            return Ok(new
+            {
+                message = "Book bookmarked successfully",
+                bookmarkId = bookmark.Id,
+                bookId = bookmark.BookId
+            });
         }
 
+        // DELETE: api/Bookmarks/{bookId} - Remove bookmark
         [HttpDelete("{bookId}")]
         public async Task<IActionResult> RemoveBookmark(int bookId)
         {
@@ -98,13 +101,17 @@ namespace PokheraliDevelopers.Controllers
 
             if (bookmark == null)
             {
-                return NotFound(new { message = "Bookmark not found" });
+                return Ok(new { message = "Bookmark not found" }); // Changed to Ok to avoid frontend errors
             }
 
             _context.Bookmarks.Remove(bookmark);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Bookmark removed successfully" });
+            return Ok(new
+            {
+                message = "Bookmark removed successfully",
+                bookId = bookId
+            });
         }
     }
 }

@@ -245,7 +245,7 @@
   {
     "ContainingType": "PokheraliDevelopers.Controllers.BookmarksController",
     "Method": "AddBookmark",
-    "RelativePath": "api/Bookmarks/{bookId}",
+    "RelativePath": "api/Bookmarks",
     "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
@@ -300,6 +300,11 @@
       {
         "Name": "sort",
         "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "desc",
+        "Type": "System.Boolean",
         "IsRequired": false
       },
       {
@@ -431,6 +436,43 @@
   },
   {
     "ContainingType": "PokheraliDevelopers.Controllers.BooksController",
+    "Method": "SetDiscount",
+    "RelativePath": "api/Books/{id}/discount",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "discountDto",
+        "Type": "PokheraliDevelopers.Dto.DiscountDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "PokheraliDevelopers.Controllers.BooksController",
+    "Method": "RemoveDiscount",
+    "RelativePath": "api/Books/{id}/discount",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "PokheraliDevelopers.Controllers.BooksController",
     "Method": "UpdateInventory",
     "RelativePath": "api/Books/{id}/inventory",
     "HttpMethod": "PATCH",
@@ -449,6 +491,26 @@
       }
     ],
     "ReturnTypes": []
+  },
+  {
+    "ContainingType": "PokheraliDevelopers.Controllers.BooksController",
+    "Method": "GetGenres",
+    "RelativePath": "api/Books/genres",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
   },
   {
     "ContainingType": "PokheraliDevelopers.Controllers.CartController",
@@ -580,6 +642,27 @@
       {
         "Name": "id",
         "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "PokheraliDevelopers.Controllers.OrdersController",
+    "Method": "FulfillOrder",
+    "RelativePath": "api/Orders/{orderId}/fulfill",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "orderId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "claimCode",
+        "Type": "System.String",
         "IsRequired": true
       }
     ],

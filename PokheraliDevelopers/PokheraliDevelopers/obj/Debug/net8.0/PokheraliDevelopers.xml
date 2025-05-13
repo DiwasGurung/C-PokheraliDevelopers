@@ -28,5 +28,17 @@
         <member name="M:PokheraliDevelopers.Migrations.paymentmethodremove.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
             <inheritdoc />
         </member>
+        <member name="T:PokheraliDevelopers.Migrations.updates">
+            <inheritdoc />
+        </member>
+        <member name="M:PokheraliDevelopers.Migrations.updates.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PokheraliDevelopers.Migrations.updates.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PokheraliDevelopers.Migrations.updates.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
     </members>
 </doc>
