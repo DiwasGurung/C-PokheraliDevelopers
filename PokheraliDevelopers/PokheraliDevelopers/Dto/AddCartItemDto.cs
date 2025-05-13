@@ -1,11 +1,14 @@
-﻿// DTOs/AddCartItemDto.cs
+﻿// Models/DTOs/AddCartItemDto.cs
 using System.ComponentModel.DataAnnotations;
 
-public class AddCartItemDto
+namespace PokheraliDevelopers.Dto
 {
-    [Required]
-    public int BookId { get; set; }
+    public class AddCartItemDto
+    {
+        [Required]
+        public int BookId { get; set; }
 
-    [Required, Range(1, 100)]
-    public int Quantity { get; set; } = 1;
+        [Required, Range(1, 100)]
+        public int Quantity { get; set; } = 1;
+    }
 }

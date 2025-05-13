@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PokheraliDevelopers.Data;
+using PokheraliDevelopers.Dto;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,7 +27,8 @@ public class AnnouncementsController : ControllerBase
         var now = DateTime.UtcNow;
 
         var announcements = await _context.Announcements
-            .Where(a => a.IsActive && a.StartDate <= now && a.EndDate >= now)
+            .Where(a => a.IsActive && a.StartDate <= now &&
+                   (!a.EndDate.HasValue || a.EndDate.Value >= now))
             .OrderByDescending(a => a.CreatedAt)
             .ToListAsync();
 
@@ -63,7 +65,7 @@ public class AnnouncementsController : ControllerBase
     // POST: api/Announcements - Create a new announcement
     [HttpPost]
     [Authorize(Roles = "Admin")]
-    public async Task<ActionResult<Announcement>> CreateAnnouncement([FromBody] Announcement announcement)
+    public async Task<ActionResult<Announcement>> CreateAnnouncement([FromBody] CreateAnnouncementDto announcementDto)
     {
         if (!ModelState.IsValid)
         {
@@ -73,8 +75,18 @@ public class AnnouncementsController : ControllerBase
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         // Set creation info
-        announcement.CreatedAt = DateTime.UtcNow;
-        announcement.CreatedById = userId;
+        var announcement = new Announcement
+        {
+            Title = announcementDto.Title,
+            Content = announcementDto.Content,
+            StartDate = announcementDto.StartDate,
+            EndDate = announcementDto.EndDate,
+            IsActive = true,
+            CreatedById = userId,
+            CreatedAt = DateTime.UtcNow,
+            BgColor = "#f3f4f6", // Default light gray
+            TextColor = "#1f2937" // Default dark gray
+        };
 
         _context.Announcements.Add(announcement);
         await _context.SaveChangesAsync();
@@ -85,29 +97,58 @@ public class AnnouncementsController : ControllerBase
     // PUT: api/Announcements/{id} - Update an announcement
     [HttpPut("{id}")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> UpdateAnnouncement(int id, [FromBody] Announcement announcement)
+    public async Task<IActionResult> UpdateAnnouncement(int id, [FromBody] CreateAnnouncementDto announcementDto)
     {
-        if (id != announcement.Id)
+        if (!ModelState.IsValid)
         {
-            return BadRequest("Announcement ID mismatch");
+            return BadRequest(ModelState);
         }
 
-        var existingAnnouncement = await _context.Announcements.FindAsync(id);
-        if (existingAnnouncement == null)
+        var announcement = await _context.Announcements.FindAsync(id);
+        if (announcement == null)
         {
             return NotFound();
         }
 
         // Update properties
-        existingAnnouncement.Title = announcement.Title;
-        existingAnnouncement.Content = announcement.Content;
-        existingAnnouncement.BgColor = announcement.BgColor;
-        existingAnnouncement.TextColor = announcement.TextColor;
-        existingAnnouncement.StartDate = announcement.StartDate;
-        existingAnnouncement.EndDate = announcement.EndDate;
-        existingAnnouncement.IsActive = announcement.IsActive;
+        announcement.Title = announcementDto.Title;
+        announcement.Content = announcementDto.Content;
+        announcement.StartDate = announcementDto.StartDate;
+        announcement.EndDate = announcementDto.EndDate;
 
-        _context.Entry(existingAnnouncement).State = EntityState.Modified;
+        _context.Entry(announcement).State = EntityState.Modified;
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!AnnouncementExists(id))
+            {
+                return NotFound();
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        return NoContent();
+    }
+
+    // PUT: api/Announcements/{id}/toggle - Toggle announcement active status
+    [HttpPut("{id}/toggle")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> ToggleAnnouncementStatus(int id)
+    {
+        var announcement = await _context.Announcements.FindAsync(id);
+        if (announcement == null)
+        {
+            return NotFound();
+        }
+
+        announcement.IsActive = !announcement.IsActive;
 
         try
         {

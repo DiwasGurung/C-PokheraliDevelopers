@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PokheraliDevelopers.Data;
+using PokheraliDevelopers.Dto;
 using System.Security.Claims;
 
 [ApiController]
@@ -97,7 +98,7 @@ public class ReviewsController : ControllerBase
             .AnyAsync(oi =>
                 oi.BookId == reviewDto.BookId &&
                 oi.Order.UserId == userId &&
-                oi.Order.OrderStatus != "Cancelled");
+                oi.Order.OrderStatus !=OrderStatus.Cancelled);
 
         if (!hasPurchased)
         {
@@ -168,7 +169,7 @@ public class ReviewsController : ControllerBase
         // Update review
         review.Rating = reviewDto.Rating;
         review.Comment = reviewDto.Comment;
-        review.UpdatedAt = DateTime.UtcNow;
+      
 
         _context.Entry(review).State = EntityState.Modified;
 

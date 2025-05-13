@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PokheraliDevelopers")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cfc7c4a7d6e7d4f0273a2eb9149b73308d68ed50")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2084b809a2038713b96f017216abd755920b06a1")]
 [assembly: System.Reflection.AssemblyProductAttribute("PokheraliDevelopers")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PokheraliDevelopers")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

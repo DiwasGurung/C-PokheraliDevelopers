@@ -1,20 +1,27 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
-public class BookAward
+namespace PokheraliDevelopers.Models
 {
-    [Key]
-    public int Id { get; set; }
+    public class BookAward
+    {
+        [Key]
+        public int Id { get; set; }
 
-    [Required]
-    public int BookId { get; set; }
+        [Required]
+        public int BookId { get; set; }
 
-    [Required]
-    public int AwardId { get; set; }
+        [Required]
+        public int AwardId { get; set; }
 
-    public int Year { get; set; }
+        public int? Year { get; set; }
 
-    // Navigation properties
-    public virtual Book Book { get; set; }
-    public virtual Award Award { get; set; }
+        // Navigation properties
+        [ForeignKey("BookId")]
+        public virtual Book Book { get; set; }
+
+        [ForeignKey("AwardId")]
+        public virtual Award Award { get; set; }
+    }
 }

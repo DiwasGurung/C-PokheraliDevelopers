@@ -1,11 +1,14 @@
-﻿// DTOs/ClaimOrderDto.cs
+﻿// Models/DTOs/ClaimOrderDto.cs
 using System.ComponentModel.DataAnnotations;
 
-public class ClaimOrderDto
+namespace PokheraliDevelopers.Dto
 {
-    [Required]
-    public string MemberId { get; set; }
+    public class ClaimOrderDto
+    {
+        [Required]
+        public string MemberId { get; set; }
 
-    [Required]
-    public string ClaimCode { get; set; }
+        [Required]
+        public string ClaimCode { get; set; }
+    }
 }

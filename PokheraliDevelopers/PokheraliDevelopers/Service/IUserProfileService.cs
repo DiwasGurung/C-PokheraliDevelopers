@@ -1,5 +1,6 @@
 ﻿// Services/IUserProfileService.cs
 using Microsoft.EntityFrameworkCore;
+using PokheraliDevelopers.Dto;
 using System.Threading.Tasks;
 
 public interface IUserProfileService

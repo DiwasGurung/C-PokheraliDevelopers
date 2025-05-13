@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PokheraliDevelopers.Models;
 
 namespace PokheraliDevelopers.Data
@@ -12,74 +13,137 @@ namespace PokheraliDevelopers.Data
         {
         }
 
-        // Existing DbSet
         public DbSet<Book> Books { get; set; }
-
         public DbSet<CartItem> CartItems { get; set; }
         public DbSet<Announcement> Announcements { get; set; }
         public DbSet<Bookmark> Bookmarks { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<Review> Reviews { get; set; }
+        public DbSet<Award> Awards { get; set; }
+        public DbSet<BookAward> BookAwards { get; set; }
 
-        // Optional: Configure any additional model mappings or constraints
+        //public DbSet<UserProfile> UserProfiles { get; set; }
+
+
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
-            // Example: Configure Book entity
+            // Configure all DateTime properties to use UTC time
+            foreach (var entityType in builder.Model.GetEntityTypes())
+            {
+                foreach (var property in entityType.GetProperties())
+                {
+                    if (property.ClrType == typeof(DateTime) || property.ClrType == typeof(DateTime?))
+                    {
+                        property.SetColumnType("timestamp with time zone");
+                    }
+                }
+            }
+
+            // Book entity configuration
             builder.Entity<Book>(entity =>
             {
                 entity.Property(e => e.Price).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.Title).HasMaxLength(255);
                 entity.Property(e => e.Author).HasMaxLength(255);
                 entity.Property(e => e.Genre).HasMaxLength(100);
+                entity.HasIndex(e => e.ISBN).IsUnique();
             });
 
-            // Configure Announcement entity
-            builder.Entity<Announcement>(entity =>
-            {
-                entity.Property(e => e.Title).HasMaxLength(200).IsRequired();
-                entity.Property(e => e.Content).HasMaxLength(500).IsRequired();
-            });
-
-            // Configure Order entity
+            // Order entity configuration
             builder.Entity<Order>(entity =>
             {
-                entity.Property(e => e.OrderNumber).HasMaxLength(20).IsRequired();
-                entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
-                entity.Property(e => e.DiscountAmount).HasColumnType("decimal(18,2)");
+                // Configure OrderStatus to be stored as a string
+                entity.Property(e => e.OrderStatus)
+                      .HasConversion<string>();
+
+                entity.HasOne(o => o.User)
+                    .WithMany(u => u.Orders)
+                    .HasForeignKey(o => o.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
-            // Configure OrderItem entity
+            // OrderItem entity configuration
             builder.Entity<OrderItem>(entity =>
             {
-                entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
-                entity.Property(e => e.UnitDiscount).HasColumnType("decimal(18,2)");
-                entity.Property(e => e.TotalPrice).HasColumnType("decimal(18,2)");
-            });
-
-            // Configure Review entity
-            builder.Entity<Review>(entity =>
-            {
-                entity.Property(e => e.Comment).HasMaxLength(1000).IsRequired();
-            });
-            // Configure CartItem entity
-            builder.Entity<CartItem>(entity =>
-            {
-                entity.Property(e => e.Quantity).IsRequired();
-
-                // Configure relationships
-                entity.HasOne(ci => ci.Book)
-                    .WithMany()
-                    .HasForeignKey(ci => ci.BookId)
+                entity.HasOne(oi => oi.Order)
+                    .WithMany(o => o.OrderItems)
+                    .HasForeignKey(oi => oi.OrderId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasOne(ci => ci.User)
-                    .WithMany()
-                    .HasForeignKey(ci => ci.UserId)
+                entity.HasOne(oi => oi.Book)
+                    .WithMany(b => b.OrderItems)
+                    .HasForeignKey(oi => oi.BookId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // Review entity configuration
+            builder.Entity<Review>(entity =>
+            {
+                entity.HasOne(r => r.User)
+                    .WithMany(u => u.Reviews)
+                    .HasForeignKey(r => r.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(r => r.Book)
+                    .WithMany(b => b.Reviews)
+                    .HasForeignKey(r => r.BookId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Ensure one review per user per book
+                entity.HasIndex(r => new { r.UserId, r.BookId }).IsUnique();
+            });
+
+            // Bookmark entity configuration
+            builder.Entity<Bookmark>(entity =>
+            {
+                entity.HasOne(b => b.User)
+                    .WithMany(u => u.Bookmarks)
+                    .HasForeignKey(b => b.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(b => b.Book)
+                    .WithMany(b => b.Bookmarks)
+                    .HasForeignKey(b => b.BookId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Ensure one bookmark per user per book
+                entity.HasIndex(b => new { b.UserId, b.BookId }).IsUnique();
+            });
+
+            // CartItem entity configuration
+            builder.Entity<CartItem>(entity =>
+            {
+                entity.HasOne(c => c.User)
+                    .WithMany(u => u.CartItems)
+                    .HasForeignKey(c => c.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(c => c.Book)
+                    .WithMany(b => b.CartItems)
+                    .HasForeignKey(c => c.BookId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Ensure one cart item per user per book
+                entity.HasIndex(c => new { c.UserId, c.BookId }).IsUnique();
+            });
+
+            // BookAward entity configuration
+            builder.Entity<BookAward>(entity =>
+            {
+                entity.HasOne(ba => ba.Book)
+                    .WithMany(b => b.BookAwards)
+                    .HasForeignKey(ba => ba.BookId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(ba => ba.Award)
+                    .WithMany(a => a.BookAwards)
+                    .HasForeignKey(ba => ba.AwardId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }
-}   
+}

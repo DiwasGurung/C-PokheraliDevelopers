@@ -1,22 +1,14 @@
-<<<<<<< HEAD
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using PokheraliDevelopers.Data;
+using PokheraliDevelopers.Hubs;
 using PokheraliDevelopers.Models;
+using PokheraliDevelopers.Service;
 using PokheraliDevelopers.Services;
 using System.Text;
-=======
-// Program.cs (Updated with all dependencies)
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using System.Security.Claims;
->>>>>>> 70b8483259c9c9e6f32724ef5545d77bef8e3a60
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,7 +19,7 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// Add Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -35,13 +27,8 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PostgreConn")));
 
-<<<<<<< HEAD
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-    .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders();
-=======
 // Add Identity
-builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     // Password requirements
     options.Password.RequireDigit = true;
@@ -49,36 +36,15 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
     options.Password.RequireUppercase = true;
     options.Password.RequireNonAlphanumeric = true;
     options.Password.RequiredLength = 8;
->>>>>>> 70b8483259c9c9e6f32724ef5545d77bef8e3a60
 
     // User requirements
     options.User.RequireUniqueEmail = true;
 
-<<<<<<< HEAD
-builder.Services.AddScoped<CartService, CartService>();
-
-// Add this to your Program.cs where services are configured
-builder.Services.AddScoped<IEmailService, EmailService>();
-
-// In Program.cs or Startup.cs
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultScheme = "Identity.Application";
-    options.DefaultSignInScheme = "Identity.External";
-    options.DefaultAuthenticateScheme = "Identity.Application";
-    options.DefaultChallengeScheme = "Identity.Application";
-});
-
-
-
-
-// Configure CORS if needed for frontend
-=======
     // Lockout settings
     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
     options.Lockout.MaxFailedAccessAttempts = 5;
 })
-.AddEntityFrameworkStores<DatabaseHandlerEfCoreExample>()
+.AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
 // Configure Identity cookie settings
@@ -91,15 +57,16 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
 });
 
-// Register the custom services
-builder.Services.AddScoped<IUserProfileService, UserProfileService>();
+// Register services
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IFileService, FileService>();
+// In Program.cs or Startup.cs
+builder.Services.AddScoped<IDiscountService, DiscountService>();
 
 // Add SignalR for real-time notifications
 builder.Services.AddSignalR();
 
 // Configure CORS for frontend
->>>>>>> 70b8483259c9c9e6f32724ef5545d77bef8e3a60
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",
@@ -111,16 +78,6 @@ builder.Services.AddCors(options =>
                   .AllowCredentials();
         });
 });
-
-// Configure cookie authentication
-builder.Services.ConfigureApplicationCookie(options =>
-{
-    options.Cookie.HttpOnly = true;
-    options.Cookie.SameSite = SameSiteMode.None; // For cross-origin requests
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // For HTTPS
-});
-
-builder.Services.AddControllers();
 
 var app = builder.Build();
 
@@ -156,17 +113,21 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<OrderHub>("/hubs/orders");
 
-// Initialize roles and admin user
+// In Program.cs, update database initialization:
+
+// Initialize database first
 using (var scope = app.Services.CreateScope())
 {
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+    // Create database and apply migrations
+    dbContext.Database.Migrate();
+
+    // AFTER database is created, initialize roles and users
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
-    var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseHandlerEfCoreExample>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-    // Ensure database is created
-    dbContext.Database.EnsureCreated();
-
-    // Create roles if they don't exist
+    // Create roles
     string[] roles = { "Admin", "Staff", "Member" };
     foreach (var role in roles)
     {
@@ -176,7 +137,7 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
-    // Create an admin user if it doesn't exist
+    // Create admin user with UTC time
     var adminEmail = builder.Configuration["AdminCredentials:Email"];
     var adminPassword = builder.Configuration["AdminCredentials:Password"];
 
@@ -185,37 +146,23 @@ using (var scope = app.Services.CreateScope())
         var adminUser = await userManager.FindByEmailAsync(adminEmail);
         if (adminUser == null)
         {
-            adminUser = new IdentityUser
+            adminUser = new ApplicationUser
             {
                 UserName = adminEmail,
                 Email = adminEmail,
-                EmailConfirmed = true
+                EmailConfirmed = true,
+                FirstName = "Admin",
+                LastName = "User",
+                Address = "",
+                City = "",
+                State = "",
+                MemberSince = DateTime.UtcNow  // Use UTC time
             };
 
-            var result = await userManager.CreateAsync(adminUser, adminPassword);
-            if (result.Succeeded)
-            {
-                await userManager.AddToRoleAsync(adminUser, "Admin");
-
-                // Create admin profile
-                var userProfile = new UserProfile
-                {
-                    UserId = adminUser.Id,
-                    FirstName = "Admin",
-                    LastName = "User",
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                dbContext.UserProfiles.Add(userProfile);
-                await dbContext.SaveChangesAsync();
-            }
+            await userManager.CreateAsync(adminUser, adminPassword);
+            await userManager.AddToRoleAsync(adminUser, "Admin");
         }
     }
 }
 
-<<<<<<< HEAD
 app.Run();
-
-=======
-app.Run();
->>>>>>> 70b8483259c9c9e6f32724ef5545d77bef8e3a60

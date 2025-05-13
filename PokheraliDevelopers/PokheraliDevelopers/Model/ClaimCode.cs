@@ -1,4 +1,6 @@
-﻿public class ClaimCode
+﻿using PokheraliDevelopers.Models;
+
+public class ClaimCode
 {
     public int Id { get; set; }
     public string Code { get; set; }

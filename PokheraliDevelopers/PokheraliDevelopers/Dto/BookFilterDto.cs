@@ -1,5 +1,4 @@
-﻿// DTOs/BookFilterDto.cs
-public class BookFilterDto
+﻿public class BookFilterDto
 {
     public string SearchTerm { get; set; }
     public List<string> Authors { get; set; }

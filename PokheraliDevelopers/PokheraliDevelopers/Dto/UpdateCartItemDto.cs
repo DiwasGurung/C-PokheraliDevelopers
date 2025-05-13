@@ -1,8 +1,10 @@
-﻿// DTOs/UpdateCartItemDto.cs
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
-public class UpdateCartItemDto
+namespace PokheraliDevelopers.Dto
 {
-    [Required, Range(1, 100)]
-    public int Quantity { get; set; }
+    public class UpdateCartItemDto
+    {
+        [Required, Range(1, 100)]
+        public int Quantity { get; set; }
+    }
 }
