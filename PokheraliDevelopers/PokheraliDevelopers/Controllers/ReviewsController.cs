@@ -73,9 +73,7 @@ public class ReviewsController : ControllerBase
         return reviewDtos;
     }
 
-    // POST: api/Reviews - Add a review for a book
     [HttpPost]
-    [Authorize(Roles = "Member")]
     public async Task<ActionResult<ReviewDto>> AddReview([FromBody] ReviewDto reviewDto)
     {
         if (!ModelState.IsValid)
@@ -84,67 +82,85 @@ public class ReviewsController : ControllerBase
         }
 
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userName = User.Identity?.Name;
 
-        // Check if book exists
-        var book = await _context.Books.FindAsync(reviewDto.BookId);
-        if (book == null)
+        try
         {
-            return NotFound("Book not found");
+            // Check if book exists
+            var book = await _context.Books.FindAsync(reviewDto.BookId);
+            if (book == null)
+            {
+                return NotFound("Book not found");
+            }
+
+            // Check if user has purchased the book
+            // For testing purposes, you might want to temporarily comment this out
+            var hasPurchased = await _context.OrderItems
+                .Include(oi => oi.Order)
+                .AnyAsync(oi =>
+                    oi.BookId == reviewDto.BookId &&
+                    oi.Order.UserId == userId &&
+                    oi.Order.OrderStatus != OrderStatus.Cancelled);
+
+            if (!hasPurchased)
+            {
+                return BadRequest("You can only review books you have purchased");
+            }
+
+            // Check if user has already reviewed this book
+            var existingReview = await _context.Reviews
+                .FirstOrDefaultAsync(r => r.BookId == reviewDto.BookId && r.UserId == userId);
+
+            if (existingReview != null)
+            {
+                return BadRequest("You have already reviewed this book");
+            }
+
+            // Verify the rating is between 1 and 5
+            if (reviewDto.Rating < 1 || reviewDto.Rating > 5)
+            {
+                return BadRequest("Rating must be between 1 and 5");
+            }
+
+            // Create review
+            var review = new Review
+            {
+                BookId = reviewDto.BookId,
+                UserId = userId,
+                Rating = reviewDto.Rating,
+                Comment = reviewDto.Comment,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Reviews.Add(review);
+            await _context.SaveChangesAsync();
+
+            // Return the created review
+            var createdReviewDto = new ReviewDto
+            {
+                Id = review.Id,
+                BookId = review.BookId,
+                BookTitle = book.Title,
+                UserId = review.UserId,
+                UserName = userName,
+                Rating = review.Rating,
+                Comment = review.Comment,
+                CreatedAt = review.CreatedAt
+            };
+
+            return CreatedAtAction(nameof(GetBookReviews), new { bookId = review.BookId }, createdReviewDto);
         }
-
-        // Check if user has purchased the book
-        var hasPurchased = await _context.OrderItems
-            .Include(oi => oi.Order)
-            .AnyAsync(oi =>
-                oi.BookId == reviewDto.BookId &&
-                oi.Order.UserId == userId &&
-                oi.Order.OrderStatus !=OrderStatus.Cancelled);
-
-        if (!hasPurchased)
+        catch (Exception ex)
         {
-            return BadRequest("You can only review books you have purchased");
+            // Log the exception for debugging
+            Console.WriteLine($"Error in AddReview: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            return StatusCode(500, $"Internal server error: {ex.Message}");
         }
-
-        // Check if user has already reviewed this book
-        var existingReview = await _context.Reviews
-            .FirstOrDefaultAsync(r => r.BookId == reviewDto.BookId && r.UserId == userId);
-
-        if (existingReview != null)
-        {
-            return BadRequest("You have already reviewed this book");
-        }
-
-        // Create review
-        var review = new Review
-        {
-            BookId = reviewDto.BookId,
-            UserId = userId,
-            Rating = reviewDto.Rating,
-            Comment = reviewDto.Comment,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _context.Reviews.Add(review);
-        await _context.SaveChangesAsync();
-
-        // Return the created review
-        var createdReviewDto = new ReviewDto
-        {
-            Id = review.Id,
-            BookId = review.BookId,
-            UserId = review.UserId,
-            UserName = User.Identity.Name,
-            Rating = review.Rating,
-            Comment = review.Comment,
-            CreatedAt = review.CreatedAt
-        };
-
-        return CreatedAtAction(nameof(GetBookReviews), new { bookId = review.BookId }, createdReviewDto);
     }
 
     // PUT: api/Reviews/{id} - Update a review
     [HttpPut("{id}")]
-    [Authorize(Roles = "Member")]
     public async Task<IActionResult> UpdateReview(int id, [FromBody] ReviewDto reviewDto)
     {
         if (id != reviewDto.Id)

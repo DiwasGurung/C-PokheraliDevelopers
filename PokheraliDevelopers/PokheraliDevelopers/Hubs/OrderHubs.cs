@@ -3,31 +3,12 @@ using System.Threading.Tasks;
 
 namespace PokheraliDevelopers.Hubs
 {
-    public interface IOrderHub
+    public class OrderHub : Hub
     {
-        Task NewOrderPlaced(object orderInfo);
-        Task OrderCompleted(object orderInfo);
-    }
-
-    public class OrderHub : Hub<IOrderHub>
-    {
-        public async Task JoinAdminGroup(string token)
+        public async Task BroadcastOrderDetails(string orderNumber, string bookTitles)
         {
-            // In a real application, you would validate the token
-            // This is just a simple example
-            if (token == "admin-token")
-            {
-                await Groups.AddToGroupAsync(Context.ConnectionId, "Admins");
-            }
-        }
-
-        public async Task JoinStaffGroup(string token)
-        {
-            // In a real application, you would validate the token
-            if (token == "staff-token")
-            {
-                await Groups.AddToGroupAsync(Context.ConnectionId, "Staff");
-            }
+            // This will send the message to all connected clients
+            await Clients.All.SendAsync("ReceiveOrderDetails", orderNumber, bookTitles);
         }
     }
 }

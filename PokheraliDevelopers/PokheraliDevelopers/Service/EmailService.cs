@@ -10,25 +10,63 @@ public class EmailService : IEmailService
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<EmailService> _logger;
+    private readonly bool _isConfigured;
 
     public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
     {
         _configuration = configuration;
         _logger = logger;
+
+        // Check if email is properly configured
+        var smtpSettings = _configuration.GetSection("EmailSettings");
+        _isConfigured = !string.IsNullOrEmpty(smtpSettings["SmtpServer"]) &&
+                        !string.IsNullOrEmpty(smtpSettings["Port"]) &&
+                        !string.IsNullOrEmpty(smtpSettings["UserName"]) &&
+                        !string.IsNullOrEmpty(smtpSettings["Password"]) &&
+                        !string.IsNullOrEmpty(smtpSettings["SenderEmail"]);
+
+        if (!_isConfigured)
+        {
+            _logger.LogWarning("Email service is not properly configured. Emails will be logged but not sent.");
+        }
     }
 
     public async Task SendEmailAsync(string to, string subject, string htmlMessage)
     {
+        // Log the email content regardless of whether it's sent
+        _logger.LogInformation($"Email to: {to}, Subject: {subject}, Body (truncated): {htmlMessage.Substring(0, Math.Min(100, htmlMessage.Length))}...");
+
+        // If not configured, log the message but don't try to send
+        if (!_isConfigured)
+        {
+            _logger.LogWarning("Email not sent because the service is not configured.");
+            return;
+        }
+
         try
         {
-            var smtpSettings = _configuration.GetSection("SmtpSettings");
-            var host = smtpSettings["Host"];
-            var port = int.Parse(smtpSettings["Port"]);
-            var enableSsl = bool.Parse(smtpSettings["EnableSsl"]);
+            var smtpSettings = _configuration.GetSection("EmailSettings");
+
+            // Get settings with null checks and defaults
+            var host = smtpSettings["SmtpServer"];
+
+            // Parse with fallback to default values if parsing fails
+            int port = 587; // Default port for TLS
+            if (!int.TryParse(smtpSettings["Port"], out port))
+            {
+                _logger.LogWarning($"Invalid port configuration: {smtpSettings["Port"]}. Using default port 587.");
+            }
+
+            bool enableSsl = true; // Default to true for security
+            if (!bool.TryParse(smtpSettings["EnableSsl"], out enableSsl))
+            {
+                _logger.LogWarning("Invalid EnableSsl configuration. Defaulting to true.");
+            }
+
             var userName = smtpSettings["UserName"];
             var password = smtpSettings["Password"];
             var senderEmail = smtpSettings["SenderEmail"];
-            var senderName = smtpSettings["SenderName"];
+            var senderName = smtpSettings["SenderName"] ?? "Pokherali Developers";
 
             using var client = new SmtpClient(host, port)
             {
@@ -47,12 +85,12 @@ public class EmailService : IEmailService
             mailMessage.To.Add(to);
 
             await client.SendMailAsync(mailMessage);
-            _logger.LogInformation($"Email sent to {to} with subject: {subject}");
+            _logger.LogInformation($"Email sent successfully to {to}");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Failed to send email to {to} with subject: {subject}");
-            throw;
+            // Don't rethrow the exception - this allows the application to continue even if email fails
         }
     }
 

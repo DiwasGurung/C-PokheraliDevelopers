@@ -57,7 +57,6 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
 });
 
-// Register services
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IFileService, FileService>();
 // In Program.cs or Startup.cs
@@ -111,7 +110,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHub<OrderHub>("/hubs/orders");
+app.MapHub<OrderHub>("/hubs/orderHub");
 
 // In Program.cs, update database initialization:
 

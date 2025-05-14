@@ -190,23 +190,7 @@
     "Parameters": [
       {
         "Name": "model",
-        "Type": "PokheraliDevelopers.Dto.RegisterDto",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "AuthController",
-    "Method": "RegisterAsSomething",
-    "RelativePath": "api/Auth/register-something",
-    "HttpMethod": "POST",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "model",
-        "Type": "PokheraliDevelopers.Dto.RegisterDto",
+        "Type": "RegisterDto",
         "IsRequired": true
       }
     ],
@@ -649,17 +633,12 @@
   },
   {
     "ContainingType": "PokheraliDevelopers.Controllers.OrdersController",
-    "Method": "FulfillOrder",
-    "RelativePath": "api/Orders/{orderId}/fulfill",
-    "HttpMethod": "PUT",
+    "Method": "ProcessClaimCode",
+    "RelativePath": "api/Orders/claim-code",
+    "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
     "Parameters": [
-      {
-        "Name": "orderId",
-        "Type": "System.Int32",
-        "IsRequired": true
-      },
       {
         "Name": "claimCode",
         "Type": "System.String",
@@ -667,6 +646,32 @@
       }
     ],
     "ReturnTypes": []
+  },
+  {
+    "ContainingType": "PokheraliDevelopers.Controllers.OrdersController",
+    "Method": "HasPurchasedBook",
+    "RelativePath": "api/Orders/purchased/{bookId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "bookId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Boolean",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
   },
   {
     "ContainingType": "ReviewsController",

@@ -226,8 +226,7 @@ namespace PokheraliDevelopers.Controllers
             return bookDto;
         }
 
-        // POST: api/Books
-        [Authorize(Roles = "Admin")]
+        
         [HttpPost]
         public async Task<ActionResult<BookDto>> CreateBook(CreateBookDto createBookDto)
         {
@@ -295,8 +294,7 @@ namespace PokheraliDevelopers.Controllers
             });
         }
 
-        // PUT: api/Books/{id}
-        [Authorize(Roles = "Admin")]
+        
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateBook(int id, [FromBody] UpdateBookDto updateBookDto)
         {

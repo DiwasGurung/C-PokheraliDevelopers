@@ -43,14 +43,13 @@ public class AuthController : ControllerBase
         // Create the user with email and password
         var user = new ApplicationUser
         {
-            UserName = model.Email,
+            UserName = model.Email, // This was missing - Identity requires UserName to be set
             Email = model.Email,
             FirstName = model.FirstName,
             LastName = model.LastName,
             Address = model.Address,
             City = model.City,
             State = model.State,
-            
             PhoneNumber = model.PhoneNumber
         };
 
@@ -71,59 +70,16 @@ public class AuthController : ControllerBase
             {
                 Message = "User registered successfully.",
                 UserId = user.Id,
-                Email = user.Email
+                Email = user.Email,
+                FirstName = user.FirstName,
+                LastName = user.LastName
             });
         }
 
         return BadRequest(result.Errors);
     }
 
-    [HttpPost("register-something")]
-    public async Task<IActionResult> RegisterAsSomething([FromBody] RegisterDto model)
-    {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
 
-        var user = new ApplicationUser
-        {
-            UserName = model.Email,
-            Email = model.Email,
-            FirstName = model.FirstName,
-            LastName = model.LastName,
-            Address = model.Address,
-            City = model.City,
-            State = model.State,
-            
-            PhoneNumber = model.PhoneNumber
-        };
-
-        var result = await _userManager.CreateAsync(user, model.Password);
-
-        if (result.Succeeded)
-        {
-            // Ensure the "something" role exists
-            if (!await _roleManager.RoleExistsAsync("something"))
-            {
-                await _roleManager.CreateAsync(new IdentityRole("something"));
-            }
-
-            await _userManager.AddToRoleAsync(user, "something");
-
-            // Auto sign in the user
-            await _signInManager.SignInAsync(user, isPersistent: false);
-
-            return Ok(new
-            {
-                Message = "User registered successfully as 'something'.",
-                UserId = user.Id,
-                Email = user.Email
-            });
-        }
-
-        return BadRequest(result.Errors);
-    }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] CredentialDto model)

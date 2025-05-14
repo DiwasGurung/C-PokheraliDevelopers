@@ -30,10 +30,6 @@ namespace PokheraliDevelopers.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("BgColor")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -50,10 +46,6 @@ namespace PokheraliDevelopers.Migrations
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("TextColor")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -527,7 +519,6 @@ namespace PokheraliDevelopers.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ClaimCodeUsedByStaffId")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
@@ -787,9 +778,7 @@ namespace PokheraliDevelopers.Migrations
                 {
                     b.HasOne("PokheraliDevelopers.Models.ApplicationUser", "Staff")
                         .WithMany()
-                        .HasForeignKey("ClaimCodeUsedByStaffId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("ClaimCodeUsedByStaffId");
 
                     b.HasOne("PokheraliDevelopers.Models.ApplicationUser", "User")
                         .WithMany("Orders")

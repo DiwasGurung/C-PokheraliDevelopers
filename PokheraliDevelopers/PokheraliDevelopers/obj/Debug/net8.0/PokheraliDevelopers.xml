@@ -40,5 +40,29 @@
         <member name="M:PokheraliDevelopers.Migrations.updates.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
             <inheritdoc />
         </member>
+        <member name="T:PokheraliDevelopers.Migrations.tableupdates">
+            <inheritdoc />
+        </member>
+        <member name="M:PokheraliDevelopers.Migrations.tableupdates.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PokheraliDevelopers.Migrations.tableupdates.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PokheraliDevelopers.Migrations.tableupdates.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:PokheraliDevelopers.Migrations.attributeupdatedorder">
+            <inheritdoc />
+        </member>
+        <member name="M:PokheraliDevelopers.Migrations.attributeupdatedorder.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PokheraliDevelopers.Migrations.attributeupdatedorder.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PokheraliDevelopers.Migrations.attributeupdatedorder.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
     </members>
 </doc>

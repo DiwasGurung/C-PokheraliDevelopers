@@ -52,7 +52,7 @@ namespace PokheraliDevelopers.Models
 
         public string TransactionId { get; set; }
 
-        public string ClaimCodeUsedByStaffId { get; set; }
+        public string? ClaimCodeUsedByStaffId { get; set; }
 
         public bool IsClaimCodeUsed { get; set; } = false;
 
